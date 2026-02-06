@@ -167,24 +167,24 @@ spec:
             - name: MONGODB_HOST
               valueFrom:
                 secretKeyRef:
-                  name: ${{ defaults.app_name }}-mongodb-account-root
+                  name: ${{ defaults.app_name }}-mongodb-mongodb-account-root
                   key: host
             - name: MONGODB_PORT
               valueFrom:
                 secretKeyRef:
-                  name: ${{ defaults.app_name }}-mongodb-account-root
+                  name: ${{ defaults.app_name }}-mongodb-mongodb-account-root
                   key: port
             - name: MONGODB_DATABASE
               value: app
             - name: MONGODB_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: ${{ defaults.app_name }}-mongodb-account-root
+                  name: ${{ defaults.app_name }}-mongodb-mongodb-account-root
                   key: username
             - name: MONGODB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: ${{ defaults.app_name }}-mongodb-account-root
+                  name: ${{ defaults.app_name }}-mongodb-mongodb-account-root
                   key: password
             - name: BROADCAST_DRIVER
               value: log
@@ -435,35 +435,37 @@ spec:
 apiVersion: apps.kubeblocks.io/v1alpha1
 kind: Cluster
 metadata:
-  finalizers:
-    - cluster.kubeblocks.io/finalizer
   labels:
-    clusterdefinition.kubeblocks.io/name: mongodb
-    clusterversion.kubeblocks.io/name: mongodb-5.0
-    sealos-db-provider-cr: ${{ defaults.app_name }}-mongo
-  annotations: {}
-  name: ${{ defaults.app_name }}-mongo
+    kb.io/database: mongodb-8.0.4
+    app.kubernetes.io/instance: test-db
+    helm.sh/chart: mongodb-cluster-0.9.1
+    sealos-db-provider-cr: ${{ defaults.app_name }}-mongodb
+  name: ${{ defaults.app_name }}-mongodb
 spec:
   affinity:
-    nodeLabels: {}
     podAntiAffinity: Preferred
     tenancy: SharedNode
-    topologyKeys: []
-  clusterDefinitionRef: mongodb
-  clusterVersionRef: mongodb-5.0
+    topologyKeys:
+      - kubernetes.io/hostname
+  backup:
+    enabled: true
+    cronExpression: 0 18 * * *
+    method: dump
+    pitrEnabled: false
+    retentionPeriod: 7d
   componentSpecs:
-    - componentDefRef: mongodb
-      monitor: true
+    - componentDef: mongodb
       name: mongodb
       replicas: 1
       resources:
         limits:
-          cpu: 1
+          cpu: 1000m
           memory: 1Gi
         requests:
           cpu: 100m
           memory: 128Mi
-      serviceAccountName: ${{ defaults.app_name }}-mongo
+      serviceVersion: 8.0.4
+      serviceAccountName: ${{ defaults.app_name }}-mongodb
       volumeClaimTemplates:
         - name: data
           spec:
@@ -472,10 +474,7 @@ spec:
             resources:
               requests:
                 storage: 3Gi
-
   terminationPolicy: Delete
-  tolerations: []
-
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
